@@ -1,348 +1,234 @@
 import React, { useEffect, useState } from 'react';
 import { usersAPI } from '../api/axios';
 import Alert from '../components/Alert';
-
-const ROLE_CONFIG = {
-  fournisseur:  { label: 'Fournisseur',  color: '#0ea5e9', bg: 'rgba(14,165,233,0.1)',  icon: '🔧' },
-  beneficiaire: { label: 'Bénéficiaire', color: '#10b981', bg: 'rgba(16,185,129,0.1)',  icon: '👤' },
-  admin:        { label: 'Admin',        color: '#a855f7', bg: 'rgba(168,85,247,0.1)',   icon: '⚙️' },
-};
-
-const STATUT_CONFIG = {
-  actif:      { label: 'Actif',      color: '#10b981', bg: 'rgba(16,185,129,0.1)',  icon: '✅' },
-  en_attente: { label: 'En attente', color: '#f59e0b', bg: 'rgba(245,158,11,0.1)', icon: '⏳' },
-  suspendu:   { label: 'Suspendu',   color: '#f43f5e', bg: 'rgba(244,63,94,0.1)',  icon: '🚫' },
-};
+import { useLang } from '../context/LanguageContext';
 
 export default function Utilisateurs() {
+  const { t, isAr } = useLang();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [alert, setAlert] = useState(null);
   const [filterRole, setFilterRole] = useState('all');
-  const [filterStatut, setFilterStatut] = useState('all');
   const [showModal, setShowModal] = useState(false);
   const [editUser, setEditUser] = useState(null);
   const [form, setForm] = useState({ nom: '', email: '', password: '', role: 'fournisseur', telephone: '', adresse: '' });
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState('');
-  const [activeTab, setActiveTab] = useState('tous'); // 'tous' | 'validation'
+  const [activeTab, setActiveTab] = useState('tous');
+
+  const ROLE_CONFIG = {
+    fournisseur:  { label: isAr ? 'مزود خدمة' : 'Fournisseur',  color: '#0ea5e9', bg: 'rgba(14,165,233,0.1)',  icon: '🔧' },
+    beneficiaire: { label: isAr ? 'مستفيد'     : 'Bénéficiaire', color: '#10b981', bg: 'rgba(16,185,129,0.1)',  icon: '👤' },
+    admin:        { label: isAr ? 'مسؤول'      : 'Admin',        color: '#a855f7', bg: 'rgba(168,85,247,0.1)',   icon: '⚙️' },
+  };
+  const STATUT_CONFIG = {
+    actif:      { label: isAr ? 'نشط'          : 'Actif',      color: '#10b981', bg: 'rgba(16,185,129,0.1)',  icon: '✅' },
+    en_attente: { label: isAr ? 'قيد الانتظار' : 'En attente', color: '#f59e0b', bg: 'rgba(245,158,11,0.1)', icon: '⏳' },
+    suspendu:   { label: isAr ? 'موقوف'        : 'Suspendu',   color: '#f43f5e', bg: 'rgba(244,63,94,0.1)',  icon: '🚫' },
+  };
 
   const load = async () => {
     setLoading(true);
-    try {
-      const res = await usersAPI.getAll();
-      setUsers(Array.isArray(res.data) ? res.data : []);
-    } catch {
-      setAlert({ type: 'error', message: 'Impossible de charger les utilisateurs.' });
-    } finally {
-      setLoading(false);
-    }
+    try { const res = await usersAPI.getAll(); setUsers(Array.isArray(res.data) ? res.data : []); }
+    catch { setAlert({ type: 'error', message: t('error_load') }); }
+    setLoading(false);
   };
-
   useEffect(() => { load(); }, []);
 
-  const openCreate = () => {
-    setEditUser(null);
-    setForm({ nom: '', email: '', password: '', role: 'fournisseur', telephone: '', adresse: '' });
-    setShowModal(true);
-  };
-
-  const openEdit = (user) => {
-    setEditUser(user);
-    setForm({ nom: user.nom, email: user.email, password: '', role: user.role, telephone: user.telephone || '', adresse: user.adresse || '' });
-    setShowModal(true);
-  };
+  const openCreate = () => { setEditUser(null); setForm({ nom: '', email: '', password: '', role: 'fournisseur', telephone: '', adresse: '' }); setShowModal(true); };
+  const openEdit = (user) => { setEditUser(user); setForm({ nom: user.nom, email: user.email, password: '', role: user.role, telephone: user.telephone || '', adresse: user.adresse || '' }); setShowModal(true); };
 
   const handleSave = async (e) => {
-    e.preventDefault();
-    setSaving(true);
+    e.preventDefault(); setSaving(true);
     try {
-      if (editUser) {
-        await usersAPI.update(editUser.id, form);
-        setAlert({ type: 'success', message: 'Utilisateur mis à jour ✅' });
-      } else {
-        await usersAPI.create(form);
-        setAlert({ type: 'success', message: 'Utilisateur créé ✅' });
-      }
-      setShowModal(false);
-      load();
-    } catch (err) {
-      setAlert({ type: 'error', message: err.response?.data?.error || 'Erreur.' });
-    } finally {
-      setSaving(false);
-    }
+      if (editUser) { await usersAPI.update(editUser.id, form); setAlert({ type: 'success', message: isAr ? 'تم التحديث ✅' : 'Utilisateur mis à jour ✅' }); }
+      else { await usersAPI.create(form); setAlert({ type: 'success', message: isAr ? 'تم الإنشاء ✅' : 'Utilisateur créé ✅' }); }
+      setShowModal(false); load();
+    } catch (err) { setAlert({ type: 'error', message: err.response?.data?.error || t('error_load') }); }
+    setSaving(false);
   };
 
   const handleDelete = async (id, nom) => {
-    if (!window.confirm(`Supprimer ${nom} ?`)) return;
-    try {
-      await usersAPI.delete(id);
-      setAlert({ type: 'success', message: 'Utilisateur supprimé.' });
-      load();
-    } catch {
-      setAlert({ type: 'error', message: 'Erreur lors de la suppression.' });
-    }
+    if (!window.confirm(isAr ? `حذف ${nom}؟` : `Supprimer ${nom} ?`)) return;
+    try { await usersAPI.delete(id); setAlert({ type: 'success', message: isAr ? 'تم الحذف.' : 'Utilisateur supprimé.' }); load(); }
+    catch { setAlert({ type: 'error', message: t('error_load') }); }
   };
 
   const handleValider = async (id, nom) => {
-    try {
-      await usersAPI.valider(id);
-      setAlert({ type: 'success', message: `✅ ${nom} validé et activé !` });
-      load();
-    } catch {
-      setAlert({ type: 'error', message: 'Erreur lors de la validation.' });
-    }
+    try { await usersAPI.valider(id); setAlert({ type: 'success', message: isAr ? `✅ تم تفعيل ${nom}!` : `✅ ${nom} validé et activé !` }); load(); }
+    catch { setAlert({ type: 'error', message: t('error_load') }); }
   };
 
   const handleRejeter = async (id, nom) => {
-    if (!window.confirm(`Rejeter la candidature de ${nom} ?`)) return;
-    try {
-      await usersAPI.rejeter(id);
-      setAlert({ type: 'error', message: `🚫 ${nom} rejeté.` });
-      load();
-    } catch {
-      setAlert({ type: 'error', message: 'Erreur lors du rejet.' });
-    }
+    if (!window.confirm(isAr ? `رفض طلب ${nom}؟` : `Rejeter la candidature de ${nom} ?`)) return;
+    try { await usersAPI.rejeter(id); setAlert({ type: 'error', message: isAr ? `🚫 تم رفض ${nom}.` : `🚫 ${nom} rejeté.` }); load(); }
+    catch { setAlert({ type: 'error', message: t('error_load') }); }
   };
 
-  const enAttente = users.filter((u) => u.role === 'fournisseur' && u.statut === 'en_attente');
+  const enAttente = users.filter(u => u.role === 'fournisseur' && u.statut === 'en_attente');
+  const count = r => users.filter(u => u.role === r).length;
+  const filtered = users.filter(u => (filterRole === 'all' || u.role === filterRole) && (!search || u.nom?.toLowerCase().includes(search.toLowerCase()) || u.email?.toLowerCase().includes(search.toLowerCase())));
 
-  const filtered = users
-    .filter((u) => filterRole === 'all' || u.role === filterRole)
-    .filter((u) => filterStatut === 'all' || u.statut === filterStatut)
-    .filter((u) => !search ||
-      u.nom?.toLowerCase().includes(search.toLowerCase()) ||
-      u.email?.toLowerCase().includes(search.toLowerCase())
-    );
-
-  const count = (r) => users.filter((u) => u.role === r).length;
+  const TH = isAr ? ['#', 'الاسم', 'البريد', 'الدور', 'الحالة', 'تاريخ الإنشاء', 'إجراءات'] : ['#', 'Nom', 'Email', 'Rôle', 'Statut', 'Inscrit le', 'Actions'];
 
   return (
-    <div style={styles.page}>
-      <div style={styles.header}>
+    <div style={US.page} dir={isAr ? 'rtl' : 'ltr'}>
+      <div style={US.header}>
         <div>
-          <h1 style={styles.title}>Gestion des utilisateurs</h1>
-          <p style={styles.subtitle}>{users.length} utilisateur{users.length !== 1 ? 's' : ''}</p>
+          <h1 style={US.title}>{isAr ? 'إدارة المستخدمين' : 'Gestion des utilisateurs'}</h1>
+          <p style={US.subtitle}>{users.length} {isAr ? 'مستخدم' : `utilisateur${users.length !== 1 ? 's' : ''}`}</p>
         </div>
-        <button onClick={openCreate} style={styles.addBtn}>+ Ajouter un utilisateur</button>
+        <button onClick={openCreate} style={US.addBtn}>{isAr ? '+ إضافة مستخدم' : '+ Ajouter un utilisateur'}</button>
       </div>
 
       {alert && <Alert type={alert.type} message={alert.message} onClose={() => setAlert(null)} />}
 
-      {/* Stats */}
-      <div style={styles.statsGrid}>
+      <div style={US.statsGrid}>
         {Object.entries(ROLE_CONFIG).map(([role, cfg]) => (
-          <div key={role} style={{ ...styles.statCard, borderColor: `${cfg.color}30` }}>
+          <div key={role} style={{ ...US.statCard, borderColor: `${cfg.color}30` }}>
             <span style={{ fontSize: 28 }}>{cfg.icon}</span>
-            <div>
-              <div style={{ ...styles.statNum, color: cfg.color }}>{count(role)}</div>
-              <div style={styles.statLabel}>{cfg.label}s</div>
-            </div>
+            <div><div style={{ ...US.statNum, color: cfg.color }}>{count(role)}</div><div style={US.statLabel}>{cfg.label}</div></div>
           </div>
         ))}
         {enAttente.length > 0 && (
-          <div style={{ ...styles.statCard, borderColor: 'rgba(245,158,11,0.4)', background: 'rgba(245,158,11,0.05)' }}>
+          <div style={{ ...US.statCard, borderColor: 'rgba(245,158,11,0.4)', background: 'rgba(245,158,11,0.05)' }}>
             <span style={{ fontSize: 28 }}>⏳</span>
-            <div>
-              <div style={{ ...styles.statNum, color: '#f59e0b' }}>{enAttente.length}</div>
-              <div style={styles.statLabel}>En attente validation</div>
-            </div>
+            <div><div style={{ ...US.statNum, color: '#f59e0b' }}>{enAttente.length}</div><div style={US.statLabel}>{isAr ? 'بانتظار التحقق' : 'En attente validation'}</div></div>
           </div>
         )}
       </div>
 
-      {/* Onglets */}
-      <div style={styles.mainTabs}>
-        <button onClick={() => setActiveTab('tous')}
-          style={{ ...styles.mainTab, ...(activeTab === 'tous' ? styles.mainTabActive : {}) }}>
-          👥 Tous les utilisateurs
+      <div style={US.mainTabs}>
+        <button onClick={() => setActiveTab('tous')} style={{ ...US.mainTab, ...(activeTab === 'tous' ? US.mainTabActive : {}) }}>
+          👥 {isAr ? 'جميع المستخدمين' : 'Tous les utilisateurs'}
         </button>
-        <button onClick={() => setActiveTab('validation')}
-          style={{ ...styles.mainTab, ...(activeTab === 'validation' ? styles.mainTabActive : {}), ...(enAttente.length > 0 ? styles.mainTabUrgent : {}) }}>
-          ⏳ Fournisseurs à valider
-          {enAttente.length > 0 && <span style={styles.badge}>{enAttente.length}</span>}
+        <button onClick={() => setActiveTab('validation')} style={{ ...US.mainTab, ...(activeTab === 'validation' ? US.mainTabActive : {}), ...(enAttente.length > 0 ? US.mainTabUrgent : {}) }}>
+          ⏳ {isAr ? 'مزودون بانتظار التحقق' : 'Fournisseurs à valider'}
+          {enAttente.length > 0 && <span style={US.badge}>{enAttente.length}</span>}
         </button>
       </div>
 
-      {/* ── TAB VALIDATION ── */}
       {activeTab === 'validation' && (
-        <div>
-          {enAttente.length === 0 ? (
-            <div style={styles.empty}>
-              <span style={{ fontSize: 48 }}>✅</span>
-              <p>Aucun fournisseur en attente de validation</p>
-            </div>
-          ) : (
-            <div style={styles.validationGrid}>
-              {enAttente.map((u) => (
-                <div key={u.id} style={styles.validationCard}>
-                  <div style={styles.validationHeader}>
-                    <div style={{ ...styles.avatar, background: '#0ea5e9', width: 52, height: 52, fontSize: 20 }}>
-                      {(u.nom || 'F')[0].toUpperCase()}
-                    </div>
-                    <div>
-                      <div style={styles.validationName}>{u.nom}</div>
-                      <div style={styles.validationEmail}>{u.email}</div>
-                    </div>
-                    <span style={{ ...styles.statutBadge, color: '#f59e0b', background: 'rgba(245,158,11,0.1)' }}>
-                      ⏳ En attente
-                    </span>
+        enAttente.length === 0
+          ? <div style={US.empty}><span style={{ fontSize: 48 }}>✅</span><p>{isAr ? 'لا يوجد مزودون بانتظار التحقق' : 'Aucun fournisseur en attente'}</p></div>
+          : <div style={US.validationGrid}>
+              {enAttente.map(u => (
+                <div key={u.id} style={US.validationCard}>
+                  <div style={US.validationHeader}>
+                    <div style={{ ...US.avatar, background: '#0ea5e9', width: 52, height: 52, fontSize: 20 }}>{(u.nom || 'F')[0].toUpperCase()}</div>
+                    <div><div style={US.validationName}>{u.nom}</div><div style={US.validationEmail}>{u.email}</div></div>
+                    <span style={{ ...US.statutBadge, color: '#f59e0b', background: 'rgba(245,158,11,0.1)' }}>⏳ {isAr ? 'بانتظار' : 'En attente'}</span>
                   </div>
-                  <div style={styles.validationInfo}>
-                    {u.telephone && <div style={styles.infoRow}><span>📞</span><span>{u.telephone}</span></div>}
-                    {u.adresse   && <div style={styles.infoRow}><span>📍</span><span>{u.adresse}</span></div>}
-                    <div style={styles.infoRow}>
-                      <span>📅</span>
-                      <span>Inscrit le {u.createdAt ? new Date(u.createdAt).toLocaleDateString('fr-FR') : '—'}</span>
-                    </div>
+                  <div style={US.validationInfo}>
+                    {u.telephone && <div style={US.infoRow}><span>📞</span><span>{u.telephone}</span></div>}
+                    {u.adresse   && <div style={US.infoRow}><span>📍</span><span>{u.adresse}</span></div>}
+                    <div style={US.infoRow}><span>📅</span><span>{u.createdAt ? new Date(u.createdAt).toLocaleDateString(isAr ? 'ar-MA' : 'fr-FR') : '—'}</span></div>
                   </div>
-                  <div style={styles.validationActions}>
-                    <button onClick={() => handleValider(u.id, u.nom)} style={styles.validerBtn}>
-                      ✅ Valider et activer
-                    </button>
-                    <button onClick={() => handleRejeter(u.id, u.nom)} style={styles.rejeterBtn}>
-                      🚫 Rejeter
-                    </button>
+                  <div style={US.validationActions}>
+                    <button onClick={() => handleValider(u.id, u.nom)} style={US.validerBtn}>{isAr ? '✅ تفعيل' : '✅ Valider et activer'}</button>
+                    <button onClick={() => handleRejeter(u.id, u.nom)} style={US.rejeterBtn}>{isAr ? '🚫 رفض' : '🚫 Rejeter'}</button>
                   </div>
                 </div>
               ))}
             </div>
-          )}
-        </div>
       )}
 
-      {/* ── TAB TOUS ── */}
       {activeTab === 'tous' && (
         <>
-          <div style={styles.toolbar}>
-            <div style={styles.tabs}>
+          <div style={US.toolbar}>
+            <div style={US.tabs}>
               {[
-                { value: 'all', label: 'Tous', count: users.length },
-                { value: 'fournisseur', label: '🔧 Fournisseurs', count: count('fournisseur') },
-                { value: 'beneficiaire', label: '👤 Bénéficiaires', count: count('beneficiaire') },
-                { value: 'admin', label: '⚙️ Admins', count: count('admin') },
-              ].map((t) => (
-                <button key={t.value} onClick={() => setFilterRole(t.value)}
-                  style={{ ...styles.tab, ...(filterRole === t.value ? styles.tabActive : {}) }}>
-                  {t.label} <span style={styles.tabCount}>{t.count}</span>
+                { value: 'all', label: isAr ? 'الكل' : 'Tous', count: users.length },
+                { value: 'fournisseur', label: `🔧 ${ROLE_CONFIG.fournisseur.label}`, count: count('fournisseur') },
+                { value: 'beneficiaire', label: `👤 ${ROLE_CONFIG.beneficiaire.label}`, count: count('beneficiaire') },
+                { value: 'admin', label: `⚙️ ${ROLE_CONFIG.admin.label}`, count: count('admin') },
+              ].map(tab => (
+                <button key={tab.value} onClick={() => setFilterRole(tab.value)}
+                  style={{ ...US.tab, ...(filterRole === tab.value ? US.tabActive : {}) }}>
+                  {tab.label} <span style={US.tabCount}>{tab.count}</span>
                 </button>
               ))}
             </div>
-            <input value={search} onChange={(e) => setSearch(e.target.value)}
-              placeholder="🔍 Rechercher..." style={styles.search} />
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder={`🔍 ${t('search')}`} style={US.search} />
           </div>
 
-          {loading ? (
-            <div style={styles.center}><div className="spinner" /></div>
-          ) : filtered.length === 0 ? (
-            <div style={styles.empty}><span style={{ fontSize: 48 }}>👥</span><p>Aucun utilisateur trouvé</p></div>
-          ) : (
-            <div style={styles.tableWrapper}>
-              <table style={styles.table}>
-                <thead>
-                  <tr>
-                    {['#', 'Nom', 'Email', 'Rôle', 'Statut', 'Inscrit le', 'Actions'].map((h) => (
-                      <th key={h} style={styles.th}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {filtered.map((u) => {
-                    const cfg = ROLE_CONFIG[u.role] || ROLE_CONFIG.beneficiaire;
-                    const scfg = STATUT_CONFIG[u.statut] || STATUT_CONFIG.actif;
-                    const date = u.createdAt ? new Date(u.createdAt).toLocaleDateString('fr-FR') : '—';
-                    return (
-                      <tr key={u.id} style={styles.tr}>
-                        <td style={styles.td}><span style={styles.idTag}>#{u.id}</span></td>
-                        <td style={styles.td}>
-                          <div style={styles.userCell}>
-                            <div style={{ ...styles.avatar, background: cfg.color }}>
-                              {(u.nom || 'U')[0].toUpperCase()}
+          {loading ? <div style={US.center}><div className="spinner" /></div>
+            : filtered.length === 0 ? <div style={US.empty}><span style={{ fontSize: 48 }}>👥</span><p>{t('no_data')}</p></div>
+            : (
+              <div style={US.tableWrapper}>
+                <table style={US.table}>
+                  <thead><tr>{TH.map(h => <th key={h} style={US.th}>{h}</th>)}</tr></thead>
+                  <tbody>
+                    {filtered.map(u => {
+                      const cfg = ROLE_CONFIG[u.role] || ROLE_CONFIG.beneficiaire;
+                      const scfg = STATUT_CONFIG[u.statut] || STATUT_CONFIG.actif;
+                      return (
+                        <tr key={u.id} style={US.tr}>
+                          <td style={US.td}><span style={US.idTag}>#{u.id}</span></td>
+                          <td style={US.td}>
+                            <div style={US.userCell}>
+                              <div style={{ ...US.avatar, background: cfg.color }}>{(u.nom || 'U')[0].toUpperCase()}</div>
+                              <div><div style={US.userName}>{u.nom}</div>{u.telephone && <div style={{ fontSize: 11, color: 'var(--muted)' }}>{u.telephone}</div>}</div>
                             </div>
-                            <div>
-                              <div style={styles.userName}>{u.nom}</div>
-                              {u.telephone && <div style={{ fontSize: 11, color: 'var(--muted)' }}>{u.telephone}</div>}
+                          </td>
+                          <td style={US.td}><span style={US.emailText}>{u.email}</span></td>
+                          <td style={US.td}><span style={{ ...US.roleBadge, color: cfg.color, background: cfg.bg }}>{cfg.icon} {cfg.label}</span></td>
+                          <td style={US.td}><span style={{ ...US.statutBadge, color: scfg.color, background: scfg.bg }}>{scfg.icon} {scfg.label}</span></td>
+                          <td style={US.td}><span style={US.date}>{u.createdAt ? new Date(u.createdAt).toLocaleDateString(isAr ? 'ar-MA' : 'fr-FR') : '—'}</span></td>
+                          <td style={US.td}>
+                            <div style={US.actions}>
+                              {u.statut === 'en_attente' && <button onClick={() => handleValider(u.id, u.nom)} style={US.validerBtnSm}>✅</button>}
+                              <button onClick={() => openEdit(u)} style={US.editBtn}>✏️</button>
+                              <button onClick={() => handleDelete(u.id, u.nom)} style={US.deleteBtn}>🗑</button>
                             </div>
-                          </div>
-                        </td>
-                        <td style={styles.td}><span style={styles.emailText}>{u.email}</span></td>
-                        <td style={styles.td}>
-                          <span style={{ ...styles.roleBadge, color: cfg.color, background: cfg.bg }}>
-                            {cfg.icon} {cfg.label}
-                          </span>
-                        </td>
-                        <td style={styles.td}>
-                          <span style={{ ...styles.statutBadge, color: scfg.color, background: scfg.bg }}>
-                            {scfg.icon} {scfg.label}
-                          </span>
-                        </td>
-                        <td style={styles.td}><span style={styles.date}>{date}</span></td>
-                        <td style={styles.td}>
-                          <div style={styles.actions}>
-                            {u.statut === 'en_attente' && (
-                              <button onClick={() => handleValider(u.id, u.nom)} style={styles.validerBtnSm}>✅</button>
-                            )}
-                            <button onClick={() => openEdit(u)} style={styles.editBtn}>✏️</button>
-                            <button onClick={() => handleDelete(u.id, u.nom)} style={styles.deleteBtn}>🗑</button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
         </>
       )}
 
-      {/* Modal */}
       {showModal && (
-        <div style={styles.overlay} onClick={() => setShowModal(false)}>
-          <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
-            <div style={styles.modalHeader}>
-              <h2 style={styles.modalTitle}>{editUser ? '✏️ Modifier' : '+ Ajouter'} un utilisateur</h2>
-              <button onClick={() => setShowModal(false)} style={styles.closeBtn}>✕</button>
+        <div style={US.overlay} onClick={() => setShowModal(false)}>
+          <div style={US.modal} onClick={e => e.stopPropagation()} dir={isAr ? 'rtl' : 'ltr'}>
+            <div style={US.modalHeader}>
+              <h2 style={US.modalTitle}>{editUser ? (isAr ? '✏️ تعديل' : '✏️ Modifier') : (isAr ? '+ إضافة' : '+ Ajouter')} {isAr ? 'مستخدم' : 'un utilisateur'}</h2>
+              <button onClick={() => setShowModal(false)} style={US.closeBtn}>✕</button>
             </div>
-            <form onSubmit={handleSave} style={styles.form}>
-              <div style={styles.field}>
-                <label style={styles.label}>Nom *</label>
-                <input value={form.nom} onChange={(e) => setForm({ ...form, nom: e.target.value })}
-                  required placeholder="Prénom Nom" style={styles.input} />
+            <form onSubmit={handleSave} style={US.form}>
+              {[
+                { key: 'nom',       label: isAr ? 'الاسم *'            : 'Nom *',        type: 'text',     ph: isAr ? 'الاسم الكامل' : 'Prénom Nom' },
+                { key: 'email',     label: isAr ? 'البريد الإلكتروني *' : 'Email *',      type: 'email',    ph: 'email@exemple.com' },
+                { key: 'telephone', label: isAr ? 'الهاتف'              : 'Téléphone',    type: 'text',     ph: '+212 6XX XXX XXX' },
+                { key: 'adresse',   label: isAr ? 'العنوان'             : 'Adresse',      type: 'text',     ph: isAr ? 'المدينة، الحي' : 'Ville, Quartier' },
+              ].map(f => (
+                <div key={f.key} style={US.field}>
+                  <label style={US.label}>{f.label}</label>
+                  <input type={f.type} value={form[f.key]} onChange={e => setForm({ ...form, [f.key]: e.target.value })}
+                    required={f.key === 'nom' || f.key === 'email'} placeholder={f.ph} style={US.input} />
+                </div>
+              ))}
+              <div style={US.field}>
+                <label style={US.label}>{isAr ? 'كلمة المرور' : 'Mot de passe'} {editUser && <span style={{ color: 'var(--muted)', fontWeight: 400 }}>({isAr ? 'فارغ = بدون تغيير' : 'vide = inchangé'})</span>}</label>
+                <input type="password" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })}
+                  required={!editUser} placeholder={editUser ? (isAr ? 'كلمة مرور جديدة...' : 'Nouveau mot de passe...') : (isAr ? 'كلمة المرور *' : 'Mot de passe *')} style={US.input} />
               </div>
-              <div style={styles.field}>
-                <label style={styles.label}>Email *</label>
-                <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })}
-                  required placeholder="email@exemple.com" style={styles.input} />
-              </div>
-              <div style={styles.field}>
-                <label style={styles.label}>Téléphone</label>
-                <input value={form.telephone} onChange={(e) => setForm({ ...form, telephone: e.target.value })}
-                  placeholder="+212 6XX XXX XXX" style={styles.input} />
-              </div>
-              <div style={styles.field}>
-                <label style={styles.label}>Adresse</label>
-                <input value={form.adresse} onChange={(e) => setForm({ ...form, adresse: e.target.value })}
-                  placeholder="Ville, Quartier" style={styles.input} />
-              </div>
-              <div style={styles.field}>
-                <label style={styles.label}>Mot de passe {editUser && <span style={{ color: 'var(--muted)', fontWeight: 400 }}>(vide = inchangé)</span>}</label>
-                <input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })}
-                  required={!editUser} placeholder={editUser ? 'Nouveau mot de passe...' : 'Mot de passe *'} style={styles.input} />
-              </div>
-              <div style={styles.field}>
-                <label style={styles.label}>Rôle *</label>
-                <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} style={styles.select}>
-                  <option value="fournisseur">🔧 Fournisseur</option>
-                  <option value="beneficiaire">👤 Bénéficiaire</option>
-                  <option value="admin">⚙️ Admin</option>
+              <div style={US.field}>
+                <label style={US.label}>{isAr ? 'الدور *' : 'Rôle *'}</label>
+                <select value={form.role} onChange={e => setForm({ ...form, role: e.target.value })} style={US.select}>
+                  <option value="fournisseur">🔧 {ROLE_CONFIG.fournisseur.label}</option>
+                  <option value="beneficiaire">👤 {ROLE_CONFIG.beneficiaire.label}</option>
+                  <option value="admin">⚙️ {ROLE_CONFIG.admin.label}</option>
                 </select>
               </div>
-              <div style={styles.modalActions}>
-                <button type="button" onClick={() => setShowModal(false)} style={styles.cancelBtn}>Annuler</button>
-                <button type="submit" disabled={saving}
-                  style={{ ...styles.saveBtn, opacity: saving ? 0.5 : 1 }}>
-                  {saving ? '⏳...' : editUser ? '✅ Mettre à jour' : '+ Créer'}
+              <div style={US.modalActions}>
+                <button type="button" onClick={() => setShowModal(false)} style={US.cancelBtn}>{t('cancel')}</button>
+                <button type="submit" disabled={saving} style={{ ...US.saveBtn, opacity: saving ? 0.5 : 1 }}>
+                  {saving ? '⏳...' : editUser ? (isAr ? '✅ تحديث' : '✅ Mettre à jour') : (isAr ? '+ إنشاء' : '+ Créer')}
                 </button>
               </div>
             </form>
@@ -353,7 +239,7 @@ export default function Utilisateurs() {
   );
 }
 
-const styles = {
+const US = {
   page: { maxWidth: 1280, margin: '0 auto', padding: '32px 24px' },
   header: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24, flexWrap: 'wrap', gap: 16 },
   title: { fontFamily: 'var(--font-display)', fontSize: 32, fontWeight: 800, color: '#fff' },

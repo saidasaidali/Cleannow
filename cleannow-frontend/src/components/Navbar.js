@@ -1,33 +1,36 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useLang } from '../context/LanguageContext';
 
 const NAV_LINKS = {
   admin: [
-    { to: '/dashboard', label: 'Tableau de bord', icon: '⊞' },
-    { to: '/services', label: 'Services', icon: '✦' },
-    { to: '/demandes', label: 'Demandes', icon: '📋' },
-    { to: '/paiements', label: 'Paiements', icon: '💳' },
-    { to: '/evaluations', label: 'Évaluations', icon: '★' },
+    { to: '/dashboard',     key: 'nav_dashboard',    icon: '⊞' },
+    { to: '/services',      key: 'nav_services',     icon: '✦' },
+    { to: '/demandes',      key: 'nav_demandes',     icon: '📋' },
+    { to: '/paiements',     key: 'nav_paiements',    icon: '💳' },
+    { to: '/evaluations',   key: 'nav_evaluations',  icon: '★' },
+    { to: '/utilisateurs',  key: 'nav_utilisateurs', icon: '👥' },
   ],
   beneficiaire: [
-    { to: '/dashboard', label: 'Accueil', icon: '⊞' },
-    { to: '/services', label: 'Services', icon: '✦' },
-    { to: '/mes-demandes', label: 'Mes Demandes', icon: '📋' },
-    { to: '/paiements', label: 'Paiements', icon: '💳' },
-    { to: '/evaluations', label: 'Évaluations', icon: '★' },
+    { to: '/dashboard',    key: 'nav_dashboard',   icon: '⊞' },
+    { to: '/services',     key: 'nav_services',    icon: '✦' },
+    { to: '/mes-demandes', key: 'nav_mydemandes',  icon: '📋' },
+    { to: '/paiements',    key: 'nav_paiements',   icon: '💳' },
+    { to: '/evaluations',  key: 'nav_evaluations', icon: '★' },
   ],
   fournisseur: [
-    { to: '/dashboard', label: 'Tableau de bord', icon: '⊞' },
-    { to: '/demandes-a-traiter', label: 'À traiter', icon: '📋' },
-    { to: '/paiements', label: 'Paiements', icon: '💳' },
+    { to: '/dashboard',          key: 'nav_dashboard', icon: '⊞' },
+    { to: '/demandes-a-traiter', key: 'nav_demandes',  icon: '📋' },
+    { to: '/paiements',          key: 'nav_paiements', icon: '💳' },
   ],
 };
 
 export default function Navbar() {
-  const { user, logout, isAdmin } = useAuth();
-  const location = useLocation();
-  const navigate = useNavigate();
+  const { user, logout }      = useAuth();
+  const { lang, toggleLang, t } = useLang();
+  const location  = useLocation();
+  const navigate  = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
 
   const links = NAV_LINKS[user?.role] || [];
@@ -37,7 +40,11 @@ export default function Navbar() {
     navigate('/login');
   };
 
-  const roleColors = { admin: '#f59e0b', beneficiaire: '#0ea5e9', fournisseur: '#10b981' };
+  const roleColors = {
+    admin:        '#f59e0b',
+    beneficiaire: '#0ea5e9',
+    fournisseur:  '#10b981',
+  };
   const roleColor = roleColors[user?.role] || '#64748b';
 
   return (
@@ -46,7 +53,9 @@ export default function Navbar() {
         {/* Logo */}
         <Link to="/dashboard" style={styles.logo}>
           <span style={styles.logoIcon}>◈</span>
-          <span style={styles.logoText}>Clean<span style={{ color: 'var(--sky)' }}>Now</span></span>
+          <span style={styles.logoText}>
+            Clean<span style={{ color: 'var(--sky)' }}>Now</span>
+          </span>
         </Link>
 
         {/* Desktop links */}
@@ -61,13 +70,22 @@ export default function Navbar() {
               }}
             >
               <span style={styles.linkIcon}>{l.icon}</span>
-              {l.label}
+              {t(l.key)}
             </Link>
           ))}
         </div>
 
-        {/* User info + logout */}
+        {/* User area */}
         <div style={styles.userArea}>
+          {/* Bouton langue */}
+          <button
+            onClick={toggleLang}
+            style={styles.langBtn}
+            title={lang === 'fr' ? 'التبديل إلى العربية' : 'Passer en français'}
+          >
+            {lang === 'fr' ? '🇲🇦 AR' : '🇫🇷 FR'}
+          </button>
+
           <div style={styles.userBadge}>
             <div style={{ ...styles.avatar, background: roleColor }}>
               {user?.nom?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || '?'}
@@ -77,9 +95,15 @@ export default function Navbar() {
               <span style={{ ...styles.userRole, color: roleColor }}>{user?.role}</span>
             </div>
           </div>
-          <button onClick={handleLogout} style={styles.logoutBtn} title="Déconnexion">
+
+          <button
+            onClick={handleLogout}
+            style={styles.logoutBtn}
+            title={t('nav_logout')}
+          >
             ⇤
           </button>
+
           {/* Burger */}
           <button onClick={() => setMenuOpen(!menuOpen)} style={styles.burger}>
             {menuOpen ? '✕' : '☰'}
@@ -90,6 +114,11 @@ export default function Navbar() {
       {/* Mobile menu */}
       {menuOpen && (
         <div style={styles.mobileMenu}>
+          {/* Bouton langue mobile */}
+          <button onClick={toggleLang} style={styles.mobileLangBtn}>
+            {lang === 'fr' ? '🇲🇦 التبديل إلى العربية' : '🇫🇷 Passer en français'}
+          </button>
+
           {links.map((l) => (
             <Link
               key={l.to}
@@ -97,11 +126,12 @@ export default function Navbar() {
               style={styles.mobileLink}
               onClick={() => setMenuOpen(false)}
             >
-              <span>{l.icon}</span> {l.label}
+              <span>{l.icon}</span> {t(l.key)}
             </Link>
           ))}
+
           <button onClick={handleLogout} style={styles.mobileLinkBtn}>
-            ⇤ Déconnexion
+            ⇤ {t('nav_logout')}
           </button>
         </div>
       )}
@@ -126,16 +156,30 @@ const styles = {
     textDecoration: 'none', flexShrink: 0,
   },
   logoIcon: { fontSize: 22, color: 'var(--sky)' },
-  logoText: { fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 800, color: '#fff', letterSpacing: '-0.5px' },
+  logoText: {
+    fontFamily: 'var(--font-display)', fontSize: 22,
+    fontWeight: 800, color: '#fff', letterSpacing: '-0.5px',
+  },
   links: { display: 'flex', gap: 4, flex: 1, flexWrap: 'wrap' },
   link: {
-    display: 'flex', alignItems: 'center', gap: 6, padding: '6px 14px',
-    borderRadius: 8, textDecoration: 'none', color: 'var(--muted)',
-    fontSize: 14, fontWeight: 500, transition: 'all 0.2s', whiteSpace: 'nowrap',
+    display: 'flex', alignItems: 'center', gap: 6,
+    padding: '6px 14px', borderRadius: 8, textDecoration: 'none',
+    color: 'var(--muted)', fontSize: 14, fontWeight: 500,
+    transition: 'all 0.2s', whiteSpace: 'nowrap',
   },
   linkActive: { background: 'rgba(14,165,233,0.15)', color: 'var(--sky)' },
   linkIcon: { fontSize: 14 },
-  userArea: { display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 },
+  userArea: { display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 },
+  // ── Bouton langue ──────────────────────────────────────
+  langBtn: {
+    display: 'flex', alignItems: 'center', gap: 6,
+    padding: '6px 12px', borderRadius: 8,
+    border: '1px solid rgba(14,165,233,0.3)',
+    background: 'rgba(14,165,233,0.08)',
+    color: '#0ea5e9', cursor: 'pointer',
+    fontSize: 12, fontWeight: 700, letterSpacing: '0.3px',
+    whiteSpace: 'nowrap',
+  },
   userBadge: { display: 'flex', alignItems: 'center', gap: 10 },
   avatar: {
     width: 36, height: 36, borderRadius: '50%',
@@ -153,12 +197,18 @@ const styles = {
   burger: {
     display: 'none', background: 'none', border: 'none',
     color: '#fff', fontSize: 22, cursor: 'pointer',
-    '@media(max-width:768px)': { display: 'block' },
   },
   mobileMenu: {
     display: 'flex', flexDirection: 'column', gap: 4,
     padding: '12px 24px 20px',
     borderTop: '1px solid rgba(14,165,233,0.1)',
+  },
+  mobileLangBtn: {
+    display: 'flex', alignItems: 'center', gap: 8,
+    padding: '10px 14px', borderRadius: 8, marginBottom: 4,
+    border: '1px solid rgba(14,165,233,0.3)',
+    background: 'rgba(14,165,233,0.08)',
+    color: '#0ea5e9', cursor: 'pointer', fontSize: 14, fontWeight: 600,
   },
   mobileLink: {
     display: 'flex', alignItems: 'center', gap: 10,

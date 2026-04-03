@@ -1,93 +1,86 @@
 import React, { useEffect, useState } from 'react';
 import { paiementsAPI } from '../api/axios';
 import { useAuth } from '../context/AuthContext';
+import { useLang } from '../context/LanguageContext';
 import Alert from '../components/Alert';
 
-const STATUS_CONFIG = {
-  effectue:   { label: 'Effectué',   color: '#10b981', bg: 'rgba(16,185,129,0.1)',  icon: '✅' },
-  en_attente: { label: 'En attente', color: '#f59e0b', bg: 'rgba(245,158,11,0.1)', icon: '⏳' },
-  echoue:     { label: 'Échoué',     color: '#f43f5e', bg: 'rgba(244,63,94,0.1)',  icon: '✕' },
-};
-
-const METHODES = [
-  { value: 'carte',    label: '💳 Carte bancaire' },
-  { value: 'virement', label: '🏦 Virement' },
-  { value: 'especes',  label: '💵 Espèces' },
+const METHODES = (isAr) => [
+  { value: 'carte',    label: isAr ? '💳 بطاقة بنكية' : '💳 Carte bancaire' },
+  { value: 'virement', label: isAr ? '🏦 تحويل بنكي'  : '🏦 Virement' },
+  { value: 'especes',  label: isAr ? '💵 نقداً'        : '💵 Espèces' },
 ];
 
 export default function Paiements() {
   const { isAdmin, isFournisseur, isBeneficiaire } = useAuth();
-  const [paiements, setPaiements]           = useState([]);
-  const [loading, setLoading]               = useState(true);
-  const [alert, setAlert]                   = useState(null);
-  const [filterStatut, setFilterStatut]     = useState('all');
-  const [updating, setUpdating]             = useState(null);
-  const [showPayModal, setShowPayModal]     = useState(false);
+  const { t, isAr } = useLang();
+  const [paiements, setPaiements]   = useState([]);
+  const [loading, setLoading]       = useState(true);
+  const [alert, setAlert]           = useState(null);
+  const [filterStatut, setFilterStatut] = useState('all');
+  const [updating, setUpdating]     = useState(null);
+  const [showPayModal, setShowPayModal] = useState(false);
   const [selectedPaiement, setSelectedPaiement] = useState(null);
-  const [methode, setMethode]               = useState('carte');
+  const [methode, setMethode]       = useState('carte');
 
   const load = async () => {
     setLoading(true);
-    try {
-      const res = await paiementsAPI.getAll();
-      setPaiements(Array.isArray(res.data) ? res.data : []);
-    } catch (err) {
-      setAlert({ type: 'error', message: 'Impossible de charger les paiements.' });
-    } finally {
-      setLoading(false);
-    }
+    try { const res = await paiementsAPI.getAll(); setPaiements(Array.isArray(res.data) ? res.data : []); }
+    catch { setAlert({ type: 'error', message: t('error_load') }); }
+    setLoading(false);
   };
-
   useEffect(() => { load(); }, []);
-
-  const openPayModal = (paiement) => {
-    setSelectedPaiement(paiement);
-    setMethode('carte');
-    setShowPayModal(true);
-  };
 
   const handlePayer = async () => {
     if (!selectedPaiement) return;
     setUpdating(selectedPaiement.id);
     try {
-      await paiementsAPI.update(selectedPaiement.id, {
-        statut: 'effectue',
-        methode,
-        date_paiement: new Date().toISOString(),
-      });
-      setAlert({ type: 'success', message: '✅ Paiement effectué avec succès !' });
-      setShowPayModal(false);
-      load();
+      await paiementsAPI.update(selectedPaiement.id, { statut: 'effectue', methode, date_paiement: new Date().toISOString() });
+      setAlert({ type: 'success', message: isAr ? '✅ تم الدفع بنجاح!' : '✅ Paiement effectué avec succès !' });
+      setShowPayModal(false); load();
     } catch (err) {
-      const msg = err.response?.data?.error || 'Erreur lors du paiement.';
-      setAlert({ type: 'error', message: msg });
-    } finally {
-      setUpdating(null);
-    }
+      setAlert({ type: 'error', message: err.response?.data?.error || t('error_load') });
+    } finally { setUpdating(null); }
+  };
+
+  const STATUS = {
+    effectue:   { label: isAr ? 'تم الدفع'      : 'Effectué',   color: '#10b981', bg: 'rgba(16,185,129,0.1)',  icon: '✅' },
+    en_attente: { label: isAr ? 'قيد الانتظار'  : 'En attente', color: '#f59e0b', bg: 'rgba(245,158,11,0.1)', icon: '⏳' },
+    echoue:     { label: isAr ? 'فشل'           : 'Échoué',     color: '#f43f5e', bg: 'rgba(244,63,94,0.1)',  icon: '✕' },
   };
 
   const filtered = paiements.filter(p => filterStatut === 'all' || p.statut === filterStatut);
-  const total          = paiements.reduce((s, p) => s + (parseFloat(p.montant) || 0), 0);
-  const totalEffectue  = paiements.filter(p => p.statut === 'effectue').reduce((s, p) => s + (parseFloat(p.montant) || 0), 0);
+  const total = paiements.reduce((s, p) => s + (parseFloat(p.montant) || 0), 0);
+  const totalEffectue = paiements.filter(p => p.statut === 'effectue').reduce((s, p) => s + (parseFloat(p.montant) || 0), 0);
+  const currency = isAr ? 'درهم' : 'MAD';
+
+  const TABS = [
+    { value: 'all',        label: isAr ? 'الكل'          : 'Tous' },
+    { value: 'en_attente', label: `⏳ ${isAr ? 'قيد الانتظار' : 'En attente'}` },
+    { value: 'effectue',   label: `✅ ${isAr ? 'تم الدفع'    : 'Effectués'}` },
+    { value: 'echoue',     label: `✕ ${isAr ? 'فشل'          : 'Échoués'}` },
+  ];
+
+  const TH = isAr
+    ? ['#', 'الخدمة', 'العميل', 'المزود', 'المبلغ', 'الطريقة', 'التاريخ', 'الحالة', 'إجراء']
+    : ['#', 'Service', 'Client', 'Fournisseur', 'Montant', 'Méthode', 'Date', 'Statut', 'Action'];
 
   return (
-    <div style={styles.page}>
+    <div style={styles.page} dir={isAr ? 'rtl' : 'ltr'}>
       <div style={styles.header}>
         <div>
-          <h1 style={styles.title}>Paiements</h1>
-          <p style={styles.subtitle}>{paiements.length} paiement{paiements.length !== 1 ? 's' : ''}</p>
+          <h1 style={styles.title}>{t('paiements_title')}</h1>
+          <p style={styles.subtitle}>{paiements.length} {isAr ? 'دفعة' : `paiement${paiements.length !== 1 ? 's' : ''}`}</p>
         </div>
       </div>
 
       {alert && <Alert type={alert.type} message={alert.message} onClose={() => setAlert(null)} />}
 
-      {/* Résumé */}
       <div style={styles.summaryGrid}>
         {[
-          { icon: '💰', value: `${total.toFixed(2)} MAD`,               label: 'Total',      color: '#fff',    border: 'rgba(14,165,233,0.15)' },
-          { icon: '✅', value: `${totalEffectue.toFixed(2)} MAD`,       label: 'Payé',       color: '#10b981', border: 'rgba(16,185,129,0.3)'  },
-          { icon: '⏳', value: `${(total - totalEffectue).toFixed(2)} MAD`, label: 'En attente', color: '#f59e0b', border: 'rgba(245,158,11,0.3)'  },
-          { icon: '📊', value: `${total > 0 ? Math.round((totalEffectue / total) * 100) : 0}%`, label: 'Taux payé', color: '#0ea5e9', border: 'rgba(14,165,233,0.3)' },
+          { icon: '💰', value: `${total.toFixed(2)} ${currency}`,              label: isAr ? 'المجموع'    : 'Total',      color: '#fff',    border: 'rgba(14,165,233,0.15)' },
+          { icon: '✅', value: `${totalEffectue.toFixed(2)} ${currency}`,      label: isAr ? 'مدفوع'      : 'Payé',       color: '#10b981', border: 'rgba(16,185,129,0.3)' },
+          { icon: '⏳', value: `${(total-totalEffectue).toFixed(2)} ${currency}`,label: isAr ? 'معلق'     : 'En attente', color: '#f59e0b', border: 'rgba(245,158,11,0.3)' },
+          { icon: '📊', value: `${total > 0 ? Math.round((totalEffectue/total)*100) : 0}%`, label: isAr ? 'نسبة الدفع' : 'Taux payé', color: '#0ea5e9', border: 'rgba(14,165,233,0.3)' },
         ].map(c => (
           <div key={c.label} style={{ ...styles.summaryCard, borderColor: c.border }}>
             <span style={styles.summaryIcon}>{c.icon}</span>
@@ -99,152 +92,90 @@ export default function Paiements() {
         ))}
       </div>
 
-      {/* Tabs */}
       <div style={styles.tabs}>
-        {[
-          { value: 'all',        label: 'Tous' },
-          { value: 'en_attente', label: '⏳ En attente' },
-          { value: 'effectue',   label: '✅ Effectués' },
-          { value: 'echoue',     label: '✕ Échoués' },
-        ].map(t => (
-          <button key={t.value} onClick={() => setFilterStatut(t.value)}
-            style={{ ...styles.tab, ...(filterStatut === t.value ? styles.tabActive : {}) }}>
-            {t.label}
+        {TABS.map(tab => (
+          <button key={tab.value} onClick={() => setFilterStatut(tab.value)}
+            style={{ ...styles.tab, ...(filterStatut === tab.value ? styles.tabActive : {}) }}>
+            {tab.label}
           </button>
         ))}
       </div>
 
-      {loading ? (
-        <div style={styles.center}><div className="spinner" /></div>
-      ) : filtered.length === 0 ? (
-        <div style={styles.empty}>
-          <span style={{ fontSize: 48 }}>💳</span>
-          <p>Aucun paiement trouvé</p>
-          {isBeneficiaire && (
-            <p style={{ fontSize: 13, color: 'var(--muted)' }}>
-              Les paiements apparaissent automatiquement quand un fournisseur accepte votre demande.
-            </p>
-          )}
-        </div>
-      ) : (
-        <div style={styles.tableWrapper}>
-          <table style={styles.table}>
-            <thead>
-              <tr>
-                {['#', 'Service', 'Client', 'Fournisseur', 'Montant', 'Méthode', 'Date', 'Statut', 'Action'].map(h => (
-                  <th key={h} style={styles.th}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map(p => {
-                const st = STATUS_CONFIG[p.statut] || STATUS_CONFIG.en_attente;
-                const date = p.date_paiement
-                  ? new Date(p.date_paiement).toLocaleDateString('fr-FR')
-                  : p.createdAt ? new Date(p.createdAt).toLocaleDateString('fr-FR') : '—';
-                const serviceNom     = p.DemandeService?.Service?.nom || '—';
-                const clientNom      = p.DemandeService?.Beneficiaire?.nom || '—';
-                const fournisseurNom = p.DemandeService?.Fournisseur?.nom || '—';
-                const demandeStatut  = p.DemandeService?.statut;
+      {loading ? <div style={styles.center}><div className="spinner" /></div>
+        : filtered.length === 0 ? (
+          <div style={styles.empty}>
+            <span style={{ fontSize: 48 }}>💳</span>
+            <p>{t('no_data')}</p>
+            {isBeneficiaire && <p style={{ fontSize: 13, color: 'var(--muted)' }}>{isAr ? 'ستظهر المدفوعات تلقائياً عند قبول مزود الخدمة لطلبك.' : 'Les paiements apparaissent quand un fournisseur accepte votre demande.'}</p>}
+          </div>
+        ) : (
+          <div style={styles.tableWrapper}>
+            <table style={styles.table}>
+              <thead><tr>{TH.map(h => <th key={h} style={styles.th}>{h}</th>)}</tr></thead>
+              <tbody>
+                {filtered.map(p => {
+                  const st = STATUS[p.statut] || STATUS.en_attente;
+                  const date = p.date_paiement ? new Date(p.date_paiement).toLocaleDateString(isAr ? 'ar-MA' : 'fr-FR') : p.createdAt ? new Date(p.createdAt).toLocaleDateString(isAr ? 'ar-MA' : 'fr-FR') : '—';
+                  return (
+                    <tr key={p.id} style={styles.tr}>
+                      <td style={styles.td}><span style={styles.idTag}>#{p.id}</span></td>
+                      <td style={styles.td}><span style={styles.serviceNom}>{p.DemandeService?.Service?.nom || '—'}</span></td>
+                      <td style={styles.td}><span style={styles.personNom}>{p.DemandeService?.Beneficiaire?.nom || '—'}</span></td>
+                      <td style={styles.td}><span style={styles.personNom}>{p.DemandeService?.Fournisseur?.nom || '—'}</span></td>
+                      <td style={styles.td}><span style={styles.montant}>{parseFloat(p.montant || 0).toFixed(2)} {currency}</span></td>
+                      <td style={styles.td}><span style={styles.methode}>{p.methode && p.methode !== 'a_definir' ? p.methode : '—'}</span></td>
+                      <td style={styles.td}><span style={styles.date}>{date}</span></td>
+                      <td style={styles.td}><span style={{ ...styles.badge, color: st.color, background: st.bg }}>{st.icon} {st.label}</span></td>
+                      <td style={styles.td}>
+                        {isBeneficiaire && p.statut === 'en_attente' && (
+                          p.DemandeService?.statut === 'termine'
+                            ? <button onClick={() => { setSelectedPaiement(p); setMethode('carte'); setShowPayModal(true); }} disabled={updating === p.id} style={styles.payBtn}>{t('paiements_pay')}</button>
+                            : <span style={{ fontSize: 12, color: '#f59e0b' }}>{t('paiements_waiting')}</span>
+                        )}
+                        {isFournisseur && p.statut === 'en_attente' && <span style={{ fontSize: 12, color: '#f59e0b' }}>{isAr ? '⏳ في انتظار العميل' : '⏳ En attente client'}</span>}
+                        {isAdmin && p.statut === 'en_attente' && <span style={{ fontSize: 12, color: 'var(--muted)' }}>—</span>}
+                        {p.statut === 'effectue' && <span style={{ color: '#10b981', fontSize: 13 }}>{t('paiements_paid')}</span>}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
 
-                return (
-                  <tr key={p.id} style={styles.tr}>
-                    <td style={styles.td}><span style={styles.idTag}>#{p.id}</span></td>
-                    <td style={styles.td}><span style={styles.serviceNom}>{serviceNom}</span></td>
-                    <td style={styles.td}><span style={styles.personNom}>{clientNom}</span></td>
-                    <td style={styles.td}><span style={styles.personNom}>{fournisseurNom}</span></td>
-                    <td style={styles.td}><span style={styles.montant}>{parseFloat(p.montant || 0).toFixed(2)} MAD</span></td>
-                    <td style={styles.td}><span style={styles.methode}>{p.methode && p.methode !== 'a_definir' ? p.methode : '—'}</span></td>
-                    <td style={styles.td}><span style={styles.date}>{date}</span></td>
-                    <td style={styles.td}>
-                      <span style={{ ...styles.badge, color: st.color, background: st.bg }}>
-                        {st.icon} {st.label}
-                      </span>
-                    </td>
-                    <td style={styles.td}>
-                      {/* CLIENT : bouton Payer uniquement si prestation terminée */}
-                      {isBeneficiaire && p.statut === 'en_attente' && (
-                        demandeStatut === 'termine' ? (
-                          <button
-                            onClick={() => openPayModal(p)}
-                            disabled={updating === p.id}
-                            style={styles.payBtn}
-                          >
-                            💳 Payer
-                          </button>
-                        ) : (
-                          <span style={{ fontSize: 12, color: '#f59e0b' }}>⏳ Prestation en cours</span>
-                        )
-                      )}
-
-                      {/* FOURNISSEUR : lecture seule */}
-                      {isFournisseur && p.statut === 'en_attente' && (
-                        <span style={{ fontSize: 12, color: '#f59e0b' }}>⏳ En attente client</span>
-                      )}
-
-                      {/* ADMIN : lecture seule */}
-                      {isAdmin && p.statut === 'en_attente' && (
-                        <span style={{ fontSize: 12, color: 'var(--muted)' }}>—</span>
-                      )}
-
-                      {p.statut === 'effectue' && (
-                        <span style={{ color: '#10b981', fontSize: 13 }}>✅ Payé</span>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {/* Modal paiement client */}
       {showPayModal && selectedPaiement && (
         <div style={styles.overlay} onClick={() => setShowPayModal(false)}>
-          <div style={styles.modal} onClick={e => e.stopPropagation()}>
+          <div style={styles.modal} onClick={e => e.stopPropagation()} dir={isAr ? 'rtl' : 'ltr'}>
             <div style={styles.modalHeader}>
-              <h2 style={styles.modalTitle}>💳 Confirmer le paiement</h2>
+              <h2 style={styles.modalTitle}>{t('paiements_confirm')}</h2>
               <button onClick={() => setShowPayModal(false)} style={styles.closeBtn}>✕</button>
             </div>
-
             <div style={styles.payDetails}>
               <div style={styles.payRow}>
-                <span style={styles.payLabel}>Service</span>
+                <span style={styles.payLabel}>{t('paiements_service')}</span>
                 <span style={styles.payValue}>{selectedPaiement.DemandeService?.Service?.nom || '—'}</span>
               </div>
               <div style={styles.payRow}>
-                <span style={styles.payLabel}>Montant</span>
-                <span style={{ ...styles.payValue, color: '#0ea5e9', fontSize: 22, fontWeight: 800 }}>
-                  {parseFloat(selectedPaiement.montant).toFixed(2)} MAD
-                </span>
+                <span style={styles.payLabel}>{t('paiements_amount')}</span>
+                <span style={{ ...styles.payValue, color: '#0ea5e9', fontSize: 22, fontWeight: 800 }}>{parseFloat(selectedPaiement.montant).toFixed(2)} {currency}</span>
               </div>
             </div>
-
             <div style={styles.field}>
-              <label style={styles.label}>Méthode de paiement</label>
+              <label style={styles.label}>{t('paiements_method')}</label>
               <div style={styles.methodeGrid}>
-                {METHODES.map(m => (
-                  <button
-                    key={m.value}
-                    type="button"
-                    onClick={() => setMethode(m.value)}
-                    style={{ ...styles.methodeBtn, ...(methode === m.value ? styles.methodeBtnActive : {}) }}
-                  >
+                {METHODES(isAr).map(m => (
+                  <button key={m.value} type="button" onClick={() => setMethode(m.value)}
+                    style={{ ...styles.methodeBtn, ...(methode === m.value ? styles.methodeBtnActive : {}) }}>
                     {m.label}
                   </button>
                 ))}
               </div>
             </div>
-
             <div style={styles.modalActions}>
-              <button onClick={() => setShowPayModal(false)} style={styles.cancelBtn}>Annuler</button>
-              <button
-                onClick={handlePayer}
-                disabled={updating !== null}
-                style={{ ...styles.payConfirmBtn, opacity: updating !== null ? 0.5 : 1 }}
-              >
-                {updating !== null ? '⏳ Traitement...' : `✅ Payer ${parseFloat(selectedPaiement.montant).toFixed(2)} MAD`}
+              <button onClick={() => setShowPayModal(false)} style={styles.cancelBtn}>{t('cancel')}</button>
+              <button onClick={handlePayer} disabled={updating !== null} style={{ ...styles.payConfirmBtn, opacity: updating !== null ? 0.5 : 1 }}>
+                {updating !== null ? (isAr ? '⏳ جارٍ المعالجة...' : '⏳ Traitement...') : `✅ ${isAr ? 'ادفع' : 'Payer'} ${parseFloat(selectedPaiement.montant).toFixed(2)} ${currency}`}
               </button>
             </div>
           </div>

@@ -1,20 +1,21 @@
 import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from './context/AuthContext';
-import { ProtectedRoute } from './routes/ProtectedRoute';
-import Navbar from './components/Navbar';
-import Footer from './components/Footer';
+import { AuthProvider }     from './context/AuthContext';
+import { LanguageProvider } from './context/LanguageContext';
+import { ProtectedRoute }   from './routes/ProtectedRoute';
+import Navbar    from './components/Navbar';
+import Footer    from './components/Footer';
 
-import Login        from './pages/Login';
-import Register     from './pages/Register';
-import Dashboard    from './pages/Dashboard';
-import Services     from './pages/Services';
-import MesDemandes  from './pages/MesDemandes';
+import Login            from './pages/Login';
+import Register         from './pages/Register';
+import Dashboard        from './pages/Dashboard';
+import Services         from './pages/Services';
+import MesDemandes      from './pages/MesDemandes';
 import DemandesATraiter from './pages/DemandesATraiter';
-import Demandes     from './pages/Demandes';
-import Paiements    from './pages/Paiements';
-import Evaluations  from './pages/Evaluations';
-import Utilisateurs from './pages/Utilisateurs'; // ← NOUVEAU
+import Demandes         from './pages/Demandes';
+import Paiements        from './pages/Paiements';
+import Evaluations      from './pages/Evaluations';
+import Utilisateurs     from './pages/Utilisateurs';
 
 const globalCSS = `
   @keyframes spin { to { transform: rotate(360deg); } }
@@ -81,6 +82,7 @@ export default function App() {
     const style = document.createElement('style');
     style.textContent = globalCSS;
     document.head.appendChild(style);
+
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('/service-worker.js')
@@ -94,7 +96,9 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <AppRoutes />
+        <LanguageProvider>
+          <AppRoutes />
+        </LanguageProvider>
       </AuthProvider>
     </BrowserRouter>
   );
