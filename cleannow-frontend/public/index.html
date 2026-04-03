@@ -2,9 +2,13 @@
 <html lang="fr">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- ✅ Empêche le zoom automatique sur mobile -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <meta name="theme-color" content="#0ea5e9" />
     <meta name="description" content="CleanNow - Plateforme de services de nettoyage" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -12,6 +16,7 @@
     <title>CleanNow</title>
     <style>
       *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
       :root {
         --sky: #0ea5e9;
         --sky-dark: #0284c7;
@@ -32,13 +37,63 @@
         --shadow: 0 4px 24px rgba(0,0,0,0.18);
         --shadow-lg: 0 8px 48px rgba(0,0,0,0.28);
       }
+
+      html {
+        -webkit-text-size-adjust: 100%;
+        text-size-adjust: 100%;
+      }
+
       body {
         font-family: var(--font-body);
         background: var(--navy);
         color: var(--light);
         min-height: 100vh;
+        overflow-x: hidden;
+        -webkit-font-smoothing: antialiased;
       }
-      #root { min-height: 100vh; display: flex; flex-direction: column; }
+
+      #root {
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+
+      /* ── Responsive global ───────────────────────── */
+
+      /* Tableaux scrollables sur mobile */
+      table {
+        width: 100%;
+      }
+
+      /* Images responsives */
+      img {
+        max-width: 100%;
+        height: auto;
+      }
+
+      /* Inputs plus grands sur mobile (évite le zoom iOS) */
+      @media (max-width: 768px) {
+        input, textarea, select {
+          font-size: 16px !important; /* iOS zoome si < 16px */
+        }
+
+        /* Padding pages réduit */
+        [style*="padding: '32px 24px'"] {
+          padding: 16px 12px !important;
+        }
+      }
+
+      /* Burger menu visible sur mobile */
+      @media (max-width: 768px) {
+        .desktop-links { display: none !important; }
+        .burger-btn { display: block !important; }
+        .user-info { display: none !important; }
+        .lang-btn-text { display: none; }
+      }
+
+      @media (min-width: 769px) {
+        .burger-btn { display: none !important; }
+      }
     </style>
   </head>
   <body>

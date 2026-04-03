@@ -18,10 +18,11 @@ import Evaluations      from './pages/Evaluations';
 import Utilisateurs     from './pages/Utilisateurs';
 
 const globalCSS = `
-  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes spin   { to { transform: rotate(360deg); } }
   @keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+
   .spinner { display: inline-block; width: 36px; height: 36px; border: 3px solid rgba(14,165,233,0.2); border-top-color: var(--sky); border-radius: 50%; animation: spin 0.8s linear infinite; }
-  input:focus, textarea:focus, select:focus { border-color: rgba(14,165,233,0.6) !important; box-shadow: 0 0 0 3px rgba(14,165,233,0.1) !important; }
+  input:focus, textarea:focus, select:focus { border-color: rgba(14,165,233,0.6) !important; box-shadow: 0 0 0 3px rgba(14,165,233,0.1) !important; outline: none; }
   button:hover { opacity: 0.88; }
   a:hover { opacity: 0.85; }
   ::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -29,6 +30,21 @@ const globalCSS = `
   ::-webkit-scrollbar-thumb { background: rgba(14,165,233,0.3); border-radius: 3px; }
   ::-webkit-scrollbar-thumb:hover { background: rgba(14,165,233,0.5); }
   * { box-sizing: border-box; }
+  body { margin: 0; padding: 0; overflow-x: hidden; }
+
+  @media (max-width: 768px) {
+    input, textarea, select { font-size: 16px !important; }
+    table { min-width: 500px; }
+    .table-wrapper, .tableWrapper { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
+    h1 { font-size: 24px !important; }
+    h2 { font-size: 20px !important; }
+    .spinner { width: 28px; height: 28px; }
+  }
+
+  @media (hover: none) and (pointer: coarse) {
+    button { min-height: 44px; }
+    input, select, textarea { min-height: 44px; }
+  }
 `;
 
 function Layout({ children }) {
@@ -48,7 +64,6 @@ function AppRoutes() {
       <Route path="/register" element={<Register />} />
       <Route path="/"         element={<Navigate to="/dashboard" replace />} />
 
-      {/* Tous les utilisateurs connectés */}
       <Route element={<ProtectedRoute />}>
         <Route path="/dashboard"   element={<Layout><Dashboard /></Layout>} />
         <Route path="/services"    element={<Layout><Services /></Layout>} />
@@ -56,17 +71,14 @@ function AppRoutes() {
         <Route path="/evaluations" element={<Layout><Evaluations /></Layout>} />
       </Route>
 
-      {/* Bénéficiaire */}
       <Route element={<ProtectedRoute roles={['beneficiaire']} />}>
         <Route path="/mes-demandes" element={<Layout><MesDemandes /></Layout>} />
       </Route>
 
-      {/* Fournisseur + Admin */}
       <Route element={<ProtectedRoute roles={['fournisseur', 'admin']} />}>
         <Route path="/demandes-a-traiter" element={<Layout><DemandesATraiter /></Layout>} />
       </Route>
 
-      {/* Admin uniquement */}
       <Route element={<ProtectedRoute roles={['admin']} />}>
         <Route path="/demandes"     element={<Layout><Demandes /></Layout>} />
         <Route path="/utilisateurs" element={<Layout><Utilisateurs /></Layout>} />
@@ -86,8 +98,8 @@ export default function App() {
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('/service-worker.js')
-          .then((reg) => console.log('SW registered:', reg.scope))
-          .catch((err) => console.warn('SW failed:', err));
+          .then(reg => console.log('SW registered:', reg.scope))
+          .catch(err => console.warn('SW failed:', err));
       });
     }
     return () => document.head.removeChild(style);
